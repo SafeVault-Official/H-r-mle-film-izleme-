@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="tr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Arkadaşınızla ekran paylaşarak birlikte film izleyin." />
+    <title>Birlikte İzle</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section id="lobby" class="lobby-card" aria-labelledby="lobby-title">
+        <div class="brand-mark" aria-hidden="true">▶</div>
+        <p class="eyebrow">SENKRONİZE SEYİR DENEYİMİ</p>
+        <h1 id="lobby-title">Birlikte izlemek daha güzel.</h1>
+        <p class="intro">Bir oda oluşturun, arkadaşınızı davet edin ve ekranınızı gerçek zamanlı paylaşın.</p>
+        <form id="join-form" class="join-form">
+          <label for="room-code">Oda kodu</label>
+          <div class="room-entry">
+            <input id="room-code" name="room-code" maxlength="32" placeholder="Örn: FILM-GECESI" autocomplete="off" required />
+            <button id="create-room" type="button" class="secondary-button">Oluştur</button>
+          </div>
+          <button type="submit" class="primary-button">Odaya Katıl <span aria-hidden="true">→</span></button>
+        </form>
+        <p id="lobby-error" class="form-error" role="alert"></p>
+      </section>
+
+      <section id="room" class="room-view" hidden aria-live="polite">
+        <header class="topbar">
+          <a class="logo" href="/" aria-label="Birlikte İzle ana sayfa"><span>▶</span> Birlikte İzle</a>
+          <div class="room-chip">ODA: <strong id="active-room-code"></strong><button id="copy-room" type="button" aria-label="Oda kodunu kopyala">⧉</button></div>
+          <span id="connection-status" class="status waiting">Arkadaş bekleniyor</span>
+        </header>
+
+        <div class="workspace">
+          <section class="watch-panel" aria-label="Paylaşılan ekran">
+            <div class="video-stage">
+              <video id="remote-video" autoplay playsinline></video>
+              <div id="video-placeholder" class="video-placeholder">
+                <div class="placeholder-icon">▣</div>
+                <h2>Henüz paylaşım yok</h2>
+                <p>Birlikte izlemeye başlamak için ekranınızı paylaşın.</p>
+              </div>
+              <div id="sharing-badge" class="sharing-badge" hidden>● CANLI PAYLAŞIM</div>
+            </div>
+            <div class="controls">
+              <button id="share-screen" type="button" class="primary-button">Ekranı Paylaş</button>
+              <button id="stop-sharing" type="button" class="danger-button" disabled>Paylaşımı Durdur</button>
+              <p id="share-hint">Film oynatıcınızı seçerek sesle birlikte paylaşabilirsiniz.</p>
+            </div>
+            <div class="self-preview-wrap">
+              <span>SİZİN ÖNİZLEMENİZ</span>
+              <video id="local-video" autoplay muted playsinline></video>
+            </div>
+          </section>
+
+          <aside class="chat-panel" aria-label="Sohbet paneli">
+            <div class="chat-header"><div><p class="eyebrow">ODA SOHBETİ</p><h2>Mesajlar</h2></div><span class="online-dot" title="Bağlı"></span></div>
+            <div id="messages" class="messages" aria-live="polite">
+              <div class="system-message">Odaya hoş geldiniz! Arkadaşınızla mesajlaşmaya başlayın.</div>
+            </div>
+            <form id="chat-form" class="chat-form">
+              <label class="sr-only" for="chat-input">Mesajınız</label>
+              <input id="chat-input" maxlength="1000" placeholder="Bir mesaj yazın..." autocomplete="off" />
+              <button type="submit" aria-label="Mesaj gönder">↑</button>
+            </form>
+          </aside>
+        </div>
+      </section>
+    </main>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
