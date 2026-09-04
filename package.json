@@ -1,0 +1,14 @@
+{
+  "name": "watch-together",
+  "version": "1.0.0",
+  "description": "Two-person screen sharing and chat room built with Express, Socket.io, and WebRTC.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
