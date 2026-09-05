@@ -50,7 +50,7 @@ function addSystemMessage(text) {
   message.className = 'system-message';
   message.textContent = text;
   messageFeed.append(message);
-  messageFeed.scrollTop = messageFeed.scrollHeight;
+  message.scrollIntoView({ block: 'nearest' });
 }
 
 function addReaction(reaction, mine = false) {
@@ -58,7 +58,7 @@ function addReaction(reaction, mine = false) {
   item.className = `message reaction ${mine ? 'mine' : 'theirs'}`;
   item.textContent = reaction;
   messageFeed.append(item);
-  messageFeed.scrollTop = messageFeed.scrollHeight;
+  item.scrollIntoView({ block: 'nearest' });
 }
 
 function addChatMessage(text, mine = false) {
@@ -66,7 +66,7 @@ function addChatMessage(text, mine = false) {
   item.className = `message ${mine ? 'mine' : 'theirs'}`;
   item.textContent = text;
   messageFeed.append(item);
-  messageFeed.scrollTop = messageFeed.scrollHeight;
+  item.scrollIntoView({ block: 'nearest' });
 }
 
 function showWelcome() {
