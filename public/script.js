@@ -25,8 +25,19 @@ let peerConnection;
 let localStream;
 let pendingCandidates = [];
 let peerAvailable = false;
+let isStartingShare = false;
 
-const peerConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+let peerConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+
+async function loadIceConfig() {
+  try {
+    const response = await fetch('/ice-config');
+    const config = await response.json();
+    if (response.ok && Array.isArray(config.iceServers) && config.iceServers.length) peerConfig = config;
+  } catch {
+    // The built-in STUN servers remain available when the configuration endpoint is unavailable.
+  }
+}
 
 function setStatus(text, connected = false) {
   status.textContent = text;
@@ -148,17 +159,19 @@ async function makeOffer() {
 }
 
 async function startSharing() {
+  if (isStartingShare || localStream) return;
+  isStartingShare = true;
+  shareButton.disabled = true;
   try {
     if (!navigator.mediaDevices?.getDisplayMedia) {
       throw new DOMException('Ekran paylaşımı bu tarayıcıda desteklenmiyor.', 'NotSupportedError');
     }
+    if (!window.isSecureContext) {
+      throw new DOMException('Ekran paylaşımı güvenli bağlantı gerektirir.', 'SecurityError');
+    }
     localStream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
-      // `audio: true` is required for the browser to include tab/system audio in
-      // the stream that is sent to the other participant.
       audio: true,
-      preferCurrentTab: true,
-      selfBrowserSurface: 'exclude',
     });
     localVideo.srcObject = localStream;
     // The person sharing watches from the same large stage as their friend.
@@ -168,7 +181,6 @@ async function startSharing() {
     localVideo.play().catch(() => {});
     remoteVideo.play().catch(() => {});
     sharingBadge.hidden = false;
-    shareButton.disabled = true;
     stopButton.disabled = false;
     updateRemoteView();
     if (!localStream.getAudioTracks().length) {
@@ -183,9 +195,16 @@ async function startSharing() {
       addSystemMessage('Ekran paylaşımı izni verilmedi. Tarayıcıdaki paylaşım penceresinden bir sekme veya ekran seçin.');
     } else if (error.name === 'NotSupportedError') {
       addSystemMessage('Bu tarayıcı ekran paylaşımını desteklemiyor. HTTPS üzerinden güncel Chrome, Edge veya Firefox kullanın.');
+    } else if (error.name === 'SecurityError') {
+      addSystemMessage('Ekran paylaşımı yalnızca güvenli (HTTPS) bağlantıda çalışır. Uygulamayı HTTPS adresinden açın.');
+    } else if (error.name === 'AbortError') {
+      addSystemMessage('Paylaşım seçimi kapatıldı. “Ekranı Paylaş”a basıp bir pencere, sekme veya ekran seçin.');
     } else {
-      addSystemMessage('Ekran paylaşımı başlatılamadı. Sayfayı yenileyip tekrar deneyin.');
+      addSystemMessage(`Ekran paylaşımı başlatılamadı${error.message ? `: ${error.message}` : '.'}`);
     }
+  } finally {
+    isStartingShare = false;
+    if (!localStream) shareButton.disabled = false;
   }
 }
 
@@ -281,4 +300,5 @@ socket.on('answer', async (answer) => { if (peerConnection) { await peerConnecti
 socket.on('ice-candidate', async (candidate) => {
   try { if (peerConnection?.remoteDescription) await peerConnection.addIceCandidate(candidate); else pendingCandidates.push(candidate); } catch { /* Ignore stale candidates. */ }
 });
+loadIceConfig();
 window.addEventListener('beforeunload', () => { if (localStream) localStream.getTracks().forEach((track) => track.stop()); });
