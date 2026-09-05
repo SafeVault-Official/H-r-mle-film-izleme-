@@ -80,6 +80,7 @@ function createPeerConnection() {
   };
   peerConnection.ontrack = ({ streams }) => {
     remoteVideo.srcObject = streams[0];
+    remoteVideo.muted = false;
     remoteVideo.play().catch(() => {});
     streams[0].getVideoTracks().forEach((track) => track.addEventListener('ended', updateRemoteView));
     updateRemoteView();
@@ -112,6 +113,8 @@ async function startSharing() {
     localVideo.srcObject = localStream;
     // The person sharing watches from the same large stage as their friend.
     remoteVideo.srcObject = localStream;
+    // Keep the sharer's own screen audio from playing twice; the remote viewer still receives the audio track.
+    remoteVideo.muted = true;
     localVideo.play().catch(() => {});
     remoteVideo.play().catch(() => {});
     sharingBadge.hidden = false;
