@@ -78,6 +78,16 @@ function updateRemoteView() {
   enableSoundButton.hidden = !viewingPeerShare || !hasAudio;
 }
 
+function getRemoteStream(event) {
+  if (event.streams?.[0]) return event.streams[0];
+
+  const stream = remoteVideo.srcObject instanceof MediaStream
+    ? remoteVideo.srcObject
+    : new MediaStream();
+  if (!stream.getTracks().some((track) => track.id === event.track.id)) stream.addTrack(event.track);
+  return stream;
+}
+
 async function enableRemoteSound() {
   remoteVideo.muted = false;
   remoteVideo.volume = 1;
@@ -95,14 +105,15 @@ function createPeerConnection() {
   peerConnection.onicecandidate = ({ candidate }) => {
     if (candidate) socket.emit('ice-candidate', candidate);
   };
-  peerConnection.ontrack = ({ streams }) => {
-    remoteVideo.srcObject = streams[0];
+  peerConnection.ontrack = (event) => {
+    const remoteStream = getRemoteStream(event);
+    remoteVideo.srcObject = remoteStream;
     remoteVideo.muted = false;
     remoteVideo.volume = 1;
     remoteVideo.play().catch(() => {
       enableSoundButton.hidden = false;
     });
-    streams[0].getTracks().forEach((track) => track.addEventListener('ended', updateRemoteView));
+    remoteStream.getTracks().forEach((track) => track.addEventListener('ended', updateRemoteView));
     updateRemoteView();
   };
   peerConnection.onconnectionstatechange = () => {
@@ -110,6 +121,15 @@ function createPeerConnection() {
     if (['disconnected', 'failed', 'closed'].includes(peerConnection.connectionState)) setStatus('Bağlantı bekleniyor');
   };
   return peerConnection;
+}
+
+function addOrReplaceLocalTracks(peer) {
+  const senders = peer.getSenders();
+  localStream.getTracks().forEach((track) => {
+    const sender = senders.find((item) => item.track?.kind === track.kind);
+    if (sender) sender.replaceTrack(track);
+    else peer.addTrack(track, localStream);
+  });
 }
 
 async function flushCandidates() {
@@ -121,7 +141,7 @@ async function flushCandidates() {
 async function makeOffer() {
   if (!localStream || !peerAvailable) return;
   const peer = createPeerConnection();
-  localStream.getTracks().forEach((track) => peer.addTrack(track, localStream));
+  addOrReplaceLocalTracks(peer);
   const offer = await peer.createOffer();
   await peer.setLocalDescription(offer);
   socket.emit('offer', peer.localDescription);
@@ -129,9 +149,16 @@ async function makeOffer() {
 
 async function startSharing() {
   try {
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      throw new DOMException('Ekran paylaşımı bu tarayıcıda desteklenmiyor.', 'NotSupportedError');
+    }
     localStream = await navigator.mediaDevices.getDisplayMedia({
       video: true,
-      audio: { suppressLocalAudioPlayback: true },
+      // `audio: true` is required for the browser to include tab/system audio in
+      // the stream that is sent to the other participant.
+      audio: true,
+      preferCurrentTab: true,
+      selfBrowserSurface: 'exclude',
     });
     localVideo.srcObject = localStream;
     // The person sharing watches from the same large stage as their friend.
@@ -145,14 +172,20 @@ async function startSharing() {
     stopButton.disabled = false;
     updateRemoteView();
     if (!localStream.getAudioTracks().length) {
-      addSystemMessage('Bu paylaşımda ses yok. Paylaşım penceresindeki ses seçeneğini açarak tekrar deneyin.');
+      addSystemMessage('Bu paylaşımda ses yok. Tekrar başlatıp paylaşım penceresindeki “sekme/sistem sesini paylaş” seçeneğini açın.');
     }
     const [videoTrack] = localStream.getVideoTracks();
     if (videoTrack) videoTrack.addEventListener('ended', stopSharing, { once: true });
     socket.emit('ready-to-share');
     await makeOffer();
   } catch (error) {
-    if (error.name !== 'NotAllowedError') addSystemMessage('Ekran paylaşımı başlatılamadı. Lütfen tekrar deneyin.');
+    if (error.name === 'NotAllowedError') {
+      addSystemMessage('Ekran paylaşımı izni verilmedi. Tarayıcıdaki paylaşım penceresinden bir sekme veya ekran seçin.');
+    } else if (error.name === 'NotSupportedError') {
+      addSystemMessage('Bu tarayıcı ekran paylaşımını desteklemiyor. HTTPS üzerinden güncel Chrome, Edge veya Firefox kullanın.');
+    } else {
+      addSystemMessage('Ekran paylaşımı başlatılamadı. Sayfayı yenileyip tekrar deneyin.');
+    }
   }
 }
 
@@ -169,6 +202,7 @@ function stopSharing() {
     peerConnection.close();
     peerConnection = undefined;
   }
+  socket.emit('share-stopped');
   updateRemoteView();
   addSystemMessage('Ekran paylaşımınız durduruldu.');
 }
@@ -228,6 +262,11 @@ socket.on('peer-left', () => { peerAvailable = false; setStatus('Arkadaş ayrıl
 socket.on('reaction', (reaction) => addReaction(reaction, false));
 socket.on('chat-message', (message) => addChatMessage(message, false));
 socket.on('ready-to-share', () => { peerAvailable = true; addSystemMessage('Arkadaşınız ekran paylaşımına başladı.'); });
+socket.on('share-stopped', () => {
+  remoteVideo.srcObject = null;
+  updateRemoteView();
+  addSystemMessage('Arkadaşınız ekran paylaşımını durdurdu.');
+});
 socket.on('offer', async (offer) => {
   try {
     const peer = createPeerConnection();

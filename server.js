@@ -50,6 +50,10 @@ io.on('connection', (socket) => {
     if (socket.data.room) socket.to(socket.data.room).emit('ready-to-share');
   });
 
+  socket.on('share-stopped', () => {
+    if (socket.data.room) socket.to(socket.data.room).emit('share-stopped');
+  });
+
   socket.on('offer', (offer) => {
     if (socket.data.room) socket.to(socket.data.room).emit('offer', offer);
   });
