@@ -40,6 +40,12 @@ io.on('connection', (socket) => {
     if (room && allowedReactions.has(reaction)) socket.to(room).emit('reaction', reaction);
   });
 
+  socket.on('chat-message', (message) => {
+    const room = socket.data.room;
+    const text = String(message || '').trim().slice(0, 500);
+    if (room && text) socket.to(room).emit('chat-message', text);
+  });
+
   socket.on('ready-to-share', () => {
     if (socket.data.room) socket.to(socket.data.room).emit('ready-to-share');
   });

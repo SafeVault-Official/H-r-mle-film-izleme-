@@ -28,6 +28,10 @@
       </section>
 
       <section id="room" class="room-view" hidden aria-live="polite">
+        <div id="welcome-overlay" class="welcome-overlay" hidden aria-live="assertive" aria-atomic="true">
+          <div class="welcome-hearts" aria-hidden="true"><span>♥</span><span>♥</span><span>♥</span><span>♥</span><span>♥</span><span>♥</span><span>♥</span></div>
+          <p>HÖRÜM AŞKIM</p>
+        </div>
         <header class="topbar">
           <a class="logo" href="/" aria-label="Birlikte İzle ana sayfa"><span>▶</span> Birlikte İzle</a>
           <div class="room-chip">ODA: <strong id="active-room-code"></strong><button id="copy-room" type="button" aria-label="Oda kodunu kopyala">⧉</button></div>
@@ -56,12 +60,17 @@
             </div>
           </section>
 
-          <aside class="reaction-panel" aria-label="Emoji tepkileri">
-            <div class="reaction-header"><div><p class="eyebrow">BİRLİKTE HİSSET</p><h2>Kalp gönder</h2></div><span class="online-dot" title="Bağlı"></span></div>
-            <p class="reaction-intro">Filmi bölmeden duygunu paylaş.</p>
-            <div id="reaction-feed" class="reaction-feed" aria-live="polite">
-              <div class="system-message">Bir tepki seç, ikinizin ekranında da görünsün.</div>
+          <aside class="reaction-panel" aria-label="Sohbet ve emoji tepkileri">
+            <div class="reaction-header"><div><p class="eyebrow">BİRLİKTE HİSSET</p><h2>Sohbet et</h2></div><span class="online-dot" title="Bağlı"></span></div>
+            <div id="message-feed" class="message-feed" aria-live="polite">
+              <div class="system-message">Mesajlarını ve emojilerini burada paylaş.</div>
             </div>
+            <form id="chat-form" class="chat-form">
+              <label class="sr-only" for="chat-input">Mesajınız</label>
+              <input id="chat-input" maxlength="500" autocomplete="off" placeholder="Bir şeyler yaz..." />
+              <button type="submit" aria-label="Mesaj gönder">➤</button>
+            </form>
+            <p class="reaction-intro">Hızlı bir emoji gönder.</p>
             <div class="reaction-grid" aria-label="Emoji seçin">
               <button type="button" class="reaction-button" data-reaction="❤️" aria-label="Kırmızı kalp gönder">❤️</button>
               <button type="button" class="reaction-button" data-reaction="💕" aria-label="İki kalp gönder">💕</button>

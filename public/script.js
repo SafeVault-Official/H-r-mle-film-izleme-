@@ -13,7 +13,10 @@ const placeholder = document.querySelector('#video-placeholder');
 const sharingBadge = document.querySelector('#sharing-badge');
 const shareButton = document.querySelector('#share-screen');
 const stopButton = document.querySelector('#stop-sharing');
-const reactionFeed = document.querySelector('#reaction-feed');
+const messageFeed = document.querySelector('#message-feed');
+const chatForm = document.querySelector('#chat-form');
+const chatInput = document.querySelector('#chat-input');
+const welcomeOverlay = document.querySelector('#welcome-overlay');
 
 let roomCode = '';
 let peerConnection;
@@ -33,16 +36,35 @@ function addSystemMessage(text) {
   const message = document.createElement('div');
   message.className = 'system-message';
   message.textContent = text;
-  reactionFeed.append(message);
-  reactionFeed.scrollTop = reactionFeed.scrollHeight;
+  messageFeed.append(message);
+  messageFeed.scrollTop = messageFeed.scrollHeight;
 }
 
 function addReaction(reaction, mine = false) {
   const item = document.createElement('div');
-  item.className = `reaction ${mine ? 'mine' : 'theirs'}`;
+  item.className = `message reaction ${mine ? 'mine' : 'theirs'}`;
   item.textContent = reaction;
-  reactionFeed.append(item);
-  reactionFeed.scrollTop = reactionFeed.scrollHeight;
+  messageFeed.append(item);
+  messageFeed.scrollTop = messageFeed.scrollHeight;
+}
+
+function addChatMessage(text, mine = false) {
+  const item = document.createElement('div');
+  item.className = `message ${mine ? 'mine' : 'theirs'}`;
+  item.textContent = text;
+  messageFeed.append(item);
+  messageFeed.scrollTop = messageFeed.scrollHeight;
+}
+
+function showWelcome() {
+  welcomeOverlay.hidden = false;
+  window.setTimeout(() => {
+    welcomeOverlay.classList.add('is-leaving');
+    window.setTimeout(() => {
+      welcomeOverlay.hidden = true;
+      welcomeOverlay.classList.remove('is-leaving');
+    }, 500);
+  }, 3200);
 }
 
 function updateRemoteView() {
@@ -131,6 +153,7 @@ joinForm.addEventListener('submit', (event) => {
     activeRoomCode.textContent = roomCode;
     lobby.hidden = true;
     roomView.hidden = false;
+    showWelcome();
     peerAvailable = result.peerPresent;
     setStatus(peerAvailable ? 'Arkadaş bağlandı' : 'Arkadaş bekleniyor', peerAvailable);
     if (peerAvailable) addSystemMessage('Arkadaşınız odaya bağlı. Paylaşımı başlatabilirsiniz.');
@@ -148,6 +171,14 @@ document.querySelector('#copy-room').addEventListener('click', async () => {
 
 shareButton.addEventListener('click', startSharing);
 stopButton.addEventListener('click', stopSharing);
+chatForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const text = chatInput.value.trim();
+  if (!text) return;
+  socket.emit('chat-message', text);
+  addChatMessage(text, true);
+  chatInput.value = '';
+});
 document.querySelectorAll('.reaction-button').forEach((button) => {
   button.addEventListener('click', () => {
     const reaction = button.dataset.reaction;
@@ -165,6 +196,7 @@ socket.on('peer-joined', () => {
 });
 socket.on('peer-left', () => { peerAvailable = false; setStatus('Arkadaş ayrıldı'); addSystemMessage('Arkadaşınız odadan ayrıldı.'); });
 socket.on('reaction', (reaction) => addReaction(reaction, false));
+socket.on('chat-message', (message) => addChatMessage(message, false));
 socket.on('ready-to-share', () => { peerAvailable = true; addSystemMessage('Arkadaşınız ekran paylaşımına başladı.'); });
 socket.on('offer', async (offer) => {
   try {
