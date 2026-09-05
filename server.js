@@ -10,6 +10,23 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// STUN handles most connections. A TURN service can be supplied by the host for
+// users behind restrictive networks, where a direct peer-to-peer route is not possible.
+app.get('/ice-config', (_request, response) => {
+  const iceServers = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ];
+  if (process.env.TURN_URL) {
+    iceServers.push({
+      urls: process.env.TURN_URL,
+      username: process.env.TURN_USERNAME || '',
+      credential: process.env.TURN_CREDENTIAL || '',
+    });
+  }
+  response.set('Cache-Control', 'no-store').json({ iceServers });
+});
+
 io.on('connection', (socket) => {
   socket.on('join-room', (roomCode, callback) => {
     const room = String(roomCode || '').trim().toUpperCase().slice(0, 32);
