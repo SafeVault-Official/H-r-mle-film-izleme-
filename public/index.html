@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
+    <div class="heart-border heart-border-left" aria-hidden="true"><span>♥</span><span>♡</span><span>♥</span><span>♥</span><span>♡</span></div>
+    <div class="heart-border heart-border-right" aria-hidden="true"><span>♡</span><span>♥</span><span>♥</span><span>♡</span><span>♥</span></div>
     <main class="app-shell">
       <section id="lobby" class="lobby-card" aria-labelledby="lobby-title">
         <div class="brand-mark" aria-hidden="true">▶</div>
@@ -54,16 +56,20 @@
             </div>
           </section>
 
-          <aside class="chat-panel" aria-label="Sohbet paneli">
-            <div class="chat-header"><div><p class="eyebrow">ODA SOHBETİ</p><h2>Mesajlar</h2></div><span class="online-dot" title="Bağlı"></span></div>
-            <div id="messages" class="messages" aria-live="polite">
-              <div class="system-message">Odaya hoş geldiniz! Arkadaşınızla mesajlaşmaya başlayın.</div>
+          <aside class="reaction-panel" aria-label="Emoji tepkileri">
+            <div class="reaction-header"><div><p class="eyebrow">BİRLİKTE HİSSET</p><h2>Kalp gönder</h2></div><span class="online-dot" title="Bağlı"></span></div>
+            <p class="reaction-intro">Filmi bölmeden duygunu paylaş.</p>
+            <div id="reaction-feed" class="reaction-feed" aria-live="polite">
+              <div class="system-message">Bir tepki seç, ikinizin ekranında da görünsün.</div>
             </div>
-            <form id="chat-form" class="chat-form">
-              <label class="sr-only" for="chat-input">Mesajınız</label>
-              <input id="chat-input" maxlength="1000" placeholder="Bir mesaj yazın..." autocomplete="off" />
-              <button type="submit" aria-label="Mesaj gönder">↑</button>
-            </form>
+            <div class="reaction-grid" aria-label="Emoji seçin">
+              <button type="button" class="reaction-button" data-reaction="❤️" aria-label="Kırmızı kalp gönder">❤️</button>
+              <button type="button" class="reaction-button" data-reaction="💕" aria-label="İki kalp gönder">💕</button>
+              <button type="button" class="reaction-button" data-reaction="🥰" aria-label="Sevgi dolu yüz gönder">🥰</button>
+              <button type="button" class="reaction-button" data-reaction="💖" aria-label="Parlayan kalp gönder">💖</button>
+              <button type="button" class="reaction-button" data-reaction="😍" aria-label="Kalpli gözler gönder">😍</button>
+              <button type="button" class="reaction-button" data-reaction="💘" aria-label="Oklu kalp gönder">💘</button>
+            </div>
           </aside>
         </div>
       </section>

@@ -13,9 +13,7 @@ const placeholder = document.querySelector('#video-placeholder');
 const sharingBadge = document.querySelector('#sharing-badge');
 const shareButton = document.querySelector('#share-screen');
 const stopButton = document.querySelector('#stop-sharing');
-const messages = document.querySelector('#messages');
-const chatForm = document.querySelector('#chat-form');
-const chatInput = document.querySelector('#chat-input');
+const reactionFeed = document.querySelector('#reaction-feed');
 
 let roomCode = '';
 let peerConnection;
@@ -31,25 +29,25 @@ function setStatus(text, connected = false) {
   status.classList.toggle('waiting', !connected);
 }
 
-function addMessage(text, type) {
-  const message = document.createElement('div');
-  message.className = `message ${type}`;
-  message.textContent = text;
-  messages.append(message);
-  messages.scrollTop = messages.scrollHeight;
-}
-
 function addSystemMessage(text) {
   const message = document.createElement('div');
   message.className = 'system-message';
   message.textContent = text;
-  messages.append(message);
-  messages.scrollTop = messages.scrollHeight;
+  reactionFeed.append(message);
+  reactionFeed.scrollTop = reactionFeed.scrollHeight;
+}
+
+function addReaction(reaction, mine = false) {
+  const item = document.createElement('div');
+  item.className = `reaction ${mine ? 'mine' : 'theirs'}`;
+  item.textContent = reaction;
+  reactionFeed.append(item);
+  reactionFeed.scrollTop = reactionFeed.scrollHeight;
 }
 
 function updateRemoteView() {
-  const hasRemoteVideo = remoteVideo.srcObject?.getVideoTracks().some((track) => track.readyState === 'live');
-  placeholder.hidden = Boolean(hasRemoteVideo || localStream);
+  const hasVideo = remoteVideo.srcObject?.getVideoTracks().some((track) => track.readyState === 'live');
+  placeholder.hidden = Boolean(hasVideo);
 }
 
 function createPeerConnection() {
@@ -61,6 +59,7 @@ function createPeerConnection() {
   peerConnection.ontrack = ({ streams }) => {
     remoteVideo.srcObject = streams[0];
     remoteVideo.play().catch(() => {});
+    streams[0].getVideoTracks().forEach((track) => track.addEventListener('ended', updateRemoteView));
     updateRemoteView();
   };
   peerConnection.onconnectionstatechange = () => {
@@ -89,7 +88,10 @@ async function startSharing() {
   try {
     localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
     localVideo.srcObject = localStream;
+    // The person sharing watches from the same large stage as their friend.
+    remoteVideo.srcObject = localStream;
     localVideo.play().catch(() => {});
+    remoteVideo.play().catch(() => {});
     sharingBadge.hidden = false;
     shareButton.disabled = true;
     stopButton.disabled = false;
@@ -108,6 +110,7 @@ function stopSharing() {
   localStream.getTracks().forEach((track) => track.stop());
   localStream = undefined;
   localVideo.srcObject = null;
+  remoteVideo.srcObject = null;
   sharingBadge.hidden = true;
   shareButton.disabled = false;
   stopButton.disabled = true;
@@ -145,13 +148,12 @@ document.querySelector('#copy-room').addEventListener('click', async () => {
 
 shareButton.addEventListener('click', startSharing);
 stopButton.addEventListener('click', stopSharing);
-chatForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-  const text = chatInput.value.trim();
-  if (!text) return;
-  socket.emit('chat-message', text);
-  addMessage(text, 'mine');
-  chatInput.value = '';
+document.querySelectorAll('.reaction-button').forEach((button) => {
+  button.addEventListener('click', () => {
+    const reaction = button.dataset.reaction;
+    socket.emit('reaction', reaction);
+    addReaction(reaction, true);
+  });
 });
 
 socket.on('peer-joined', () => {
@@ -162,7 +164,7 @@ socket.on('peer-joined', () => {
   makeOffer().catch(() => addSystemMessage('Ekran paylaşımı bağlantısı kurulamadı.'));
 });
 socket.on('peer-left', () => { peerAvailable = false; setStatus('Arkadaş ayrıldı'); addSystemMessage('Arkadaşınız odadan ayrıldı.'); });
-socket.on('chat-message', (text) => addMessage(text, 'theirs'));
+socket.on('reaction', (reaction) => addReaction(reaction, false));
 socket.on('ready-to-share', () => { peerAvailable = true; addSystemMessage('Arkadaşınız ekran paylaşımına başladı.'); });
 socket.on('offer', async (offer) => {
   try {

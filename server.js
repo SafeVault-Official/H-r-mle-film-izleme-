@@ -34,10 +34,10 @@ io.on('connection', (socket) => {
     socket.to(room).emit('peer-joined');
   });
 
-  socket.on('chat-message', (message) => {
+  socket.on('reaction', (reaction) => {
     const room = socket.data.room;
-    const text = String(message || '').trim().slice(0, 1000);
-    if (room && text) socket.to(room).emit('chat-message', text);
+    const allowedReactions = new Set(['❤️', '💕', '🥰', '💖', '😍', '💘']);
+    if (room && allowedReactions.has(reaction)) socket.to(room).emit('reaction', reaction);
   });
 
   socket.on('ready-to-share', () => {
