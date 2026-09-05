@@ -11,6 +11,8 @@ const localVideo = document.querySelector('#local-video');
 const remoteVideo = document.querySelector('#remote-video');
 const placeholder = document.querySelector('#video-placeholder');
 const sharingBadge = document.querySelector('#sharing-badge');
+const enableSoundButton = document.querySelector('#enable-sound');
+const videoStage = document.querySelector('.video-stage');
 const shareButton = document.querySelector('#share-screen');
 const stopButton = document.querySelector('#stop-sharing');
 const messageFeed = document.querySelector('#message-feed');
@@ -69,7 +71,22 @@ function showWelcome() {
 
 function updateRemoteView() {
   const hasVideo = remoteVideo.srcObject?.getVideoTracks().some((track) => track.readyState === 'live');
+  const hasAudio = remoteVideo.srcObject?.getAudioTracks().some((track) => track.readyState === 'live');
   placeholder.hidden = Boolean(hasVideo);
+  const viewingPeerShare = hasVideo && !localStream;
+  videoStage.classList.toggle('is-viewing-remote', viewingPeerShare);
+  enableSoundButton.hidden = !viewingPeerShare || !hasAudio;
+}
+
+async function enableRemoteSound() {
+  remoteVideo.muted = false;
+  remoteVideo.volume = 1;
+  try {
+    await remoteVideo.play();
+    enableSoundButton.hidden = true;
+  } catch {
+    addSystemMessage('Sesi açmak için tarayıcınızın medya oynatma iznini verin.');
+  }
 }
 
 function createPeerConnection() {
@@ -81,8 +98,11 @@ function createPeerConnection() {
   peerConnection.ontrack = ({ streams }) => {
     remoteVideo.srcObject = streams[0];
     remoteVideo.muted = false;
-    remoteVideo.play().catch(() => {});
-    streams[0].getVideoTracks().forEach((track) => track.addEventListener('ended', updateRemoteView));
+    remoteVideo.volume = 1;
+    remoteVideo.play().catch(() => {
+      enableSoundButton.hidden = false;
+    });
+    streams[0].getTracks().forEach((track) => track.addEventListener('ended', updateRemoteView));
     updateRemoteView();
   };
   peerConnection.onconnectionstatechange = () => {
@@ -109,7 +129,10 @@ async function makeOffer() {
 
 async function startSharing() {
   try {
-    localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    localStream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: { suppressLocalAudioPlayback: true },
+    });
     localVideo.srcObject = localStream;
     // The person sharing watches from the same large stage as their friend.
     remoteVideo.srcObject = localStream;
@@ -121,6 +144,9 @@ async function startSharing() {
     shareButton.disabled = true;
     stopButton.disabled = false;
     updateRemoteView();
+    if (!localStream.getAudioTracks().length) {
+      addSystemMessage('Bu paylaşımda ses yok. Paylaşım penceresindeki ses seçeneğini açarak tekrar deneyin.');
+    }
     const [videoTrack] = localStream.getVideoTracks();
     if (videoTrack) videoTrack.addEventListener('ended', stopSharing, { once: true });
     socket.emit('ready-to-share');
@@ -174,6 +200,7 @@ document.querySelector('#copy-room').addEventListener('click', async () => {
 
 shareButton.addEventListener('click', startSharing);
 stopButton.addEventListener('click', stopSharing);
+enableSoundButton.addEventListener('click', enableRemoteSound);
 chatForm.addEventListener('submit', (event) => {
   event.preventDefault();
   const text = chatInput.value.trim();
